@@ -1,4 +1,4 @@
-pragma solidity ^0.7.5;
+pragma solidity 0.6.12;
 interface tokenRecipient {
     function receiveApproval(address _from, uint256 _value, address _token, bytes calldata _extraData) external;
 }
@@ -107,7 +107,6 @@ library SafeMath {
     mapping (address => mapping (address => uint256)) public allowance;
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
-    address[] public holderlist;
     address[] public _excluded;
     mapping (string => uint256 ) public balances;
     mapping (uint256 => uint256) public totalRewardforTC;
@@ -153,7 +152,6 @@ library SafeMath {
         totalSupply =  PERASupply;
         name = tokenName;
         symbol = tokenSymbol;
-        holderlist.push(address(this));
     }
 
 
@@ -165,7 +163,7 @@ library SafeMath {
       }
     }
 
-    function balanceRebalance(uint256 userBalances) public view returns(uint256) {
+    function balanceRebalance(uint256 userBalances) private view returns(uint256) {
       return userBalances.div(transferRate);
     }
 
@@ -196,7 +194,7 @@ library SafeMath {
         }
     }
 
-    function _isExcluded(address _addr) view private returns (bool) {
+    function _isExcluded(address _addr) view public returns (bool) {
      for(uint i=0; i < _excluded.length; i++){
          if(_addr == _excluded[i]){
              return  true;
@@ -242,8 +240,6 @@ library SafeMath {
 
         uint includedRewards = tenthousandthofamonut.mul(holderFee);
         userbalanceOf[address(this)] += (totalOut - includedRewards);
-        emit Transfer(_from, _to, uint(_value).sub(totalOut));
-        holderlist.push(_to);
 
         tradingComp(_value, _from);
         if(_isExcluded(_from) && !_isExcluded(_to)){
@@ -258,9 +254,10 @@ library SafeMath {
             uint reduceTransferRate = transactionStakerFee.div(PERASupply.sub(_removeExcludedAmounts()));
             transferRate -= reduceTransferRate;
         }
+        emit Transfer(_from, _to, uint(_value).sub(totalOut));
     }
 
-    function _removeExcludedAmounts() view public returns (uint) {
+    function _removeExcludedAmounts() view private returns (uint) {
      uint totalRemoved = 0;
          for(uint i=0; i < _excluded.length; i++){
             totalRemoved += userbalanceOf[_excluded[i]];
@@ -376,7 +373,7 @@ library SafeMath {
     }
 
 
-    function getTCreward(uint _bnum) public {
+    function getTCreward(uint _bnum) external {
          require(_bnum > 0,"min 1 ended TC is required.");
          require(_bnum.sub(1) < showBnum());
          if((_bnum*BlockSizeForTC) > tenYearsasBlock){ dailyRewardForTC = 0;}
@@ -384,25 +381,14 @@ library SafeMath {
          require(rewardEligible >0);
          if(winnerIndex != 404) {
          dlistLP[datumIndexLP].prosum  += (reward.sub(rewardEligible));
+         aTraders[_bnum.sub(1)][winnerIndex].isPaid = true;
          _transfer(address(this), msg.sender, rewardEligible);
-         aTraders[_bnum.sub(1)][winnerIndex].isPaid = true; }
+         }
     }
 
 
     function showBnum() public view returns(uint256) {
         return (block.number - genesisBlock)/BlockSizeForTC;
-    }
-
-    function getblockhash() public view returns (uint256) {
-            return uint256(blockhash(block.number-1));
-    }
-
-    function numberofholders() view public returns (uint) {
-      return holderlist.length;
-    }
-
-    function getholderfromid(uint _pid) view public returns (address){
-        return holderlist[_pid];
     }
 
     function transfer(address _to, uint256 _value) public returns (bool success) {
@@ -451,7 +437,7 @@ library SafeMath {
         str = string(s);
     }
 
-    function nAddrHash(address _address) view public returns (uint256) {
+    function nAddrHash(address _address) view private returns (uint256) {
         return uint256(_address) % 10000000000;
     }
 
@@ -460,7 +446,7 @@ library SafeMath {
     }
 
 
- function depositeLPtoken(uint256 tokens) public {
+ function depositeLPtoken(uint256 tokens) external {
         require(tokens > 1 * 10 ** LPTokenDecimals);
         require(usersLP[msg.sender].dp == 0);
         datumIndexLP++;
@@ -522,7 +508,7 @@ function LPemissionRewards(address _addr) public view returns(uint) {
         }
   }
 
-function removeLiqudityLP() public {
+function removeLiqudityLP() external {
     require(usersLP[msg.sender].liq != 0);
     uint usershareLP = (LPcutRewards(msg.sender).add(LPemissionRewards(msg.sender))).mul(decimalLossLP);
 
@@ -530,17 +516,16 @@ function removeLiqudityLP() public {
     dlistLP[datumIndexLP].liqsum =  dlistLP[datumIndexLP-1].liqsum - usersLP[msg.sender].liq;
 
     if(block.number - dlistLP[usersLP[msg.sender].dp].block <= oneWeekasBlock) {
-        ERC20(lpTokenAddress).transfer(msg.sender,  usersLP[msg.sender].liq.div(100).mul(96));
+        ERC20(lpTokenAddress).transfer(msg.sender,  usersLP[msg.sender].liq.mul(96).div(100));
     } else {
         ERC20(lpTokenAddress).transfer(msg.sender,  usersLP[msg.sender].liq);
     }
 
     dlistLP[datumIndexLP].block =  block.number;
-    _transfer(address(this), msg.sender, usershareLP.div(decimalLossLP));
-
     totalStakedLP -=  usersLP[msg.sender].liq;
     usersLP[msg.sender] = UserLP(0,0);
 
+    _transfer(address(this), msg.sender, usershareLP.div(decimalLossLP));
  }
 
  function checkusersLP(address _addr) public view returns (uint256, uint256){
@@ -551,7 +536,7 @@ function removeLiqudityLP() public {
         return (dlistLP[_val].liqsum ,dlistLP[_val].prosum);
     }
 
-    function addLPToken(address _addr)  public {
+    function addLPToken(address _addr)  external {
         require(msg.sender == manager);
         lpTokenAddress = _addr;
     }
