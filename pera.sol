@@ -87,38 +87,37 @@ library SafeMath {
     }
 }
 
-    contract PERA {
+    contract TEST {
     string public name;
     address public manager;
     string public symbol;
     uint8 public decimals = 9;
-    uint256 public LPTokenDecimals = 18;
+    uint256 private LPTokenDecimals = 18;
     uint256 public genesisBlock = block.number;
     uint256 public PERASupply = 83000000 * 10 ** uint256(decimals);
-    uint256 public constant transferRateInitial = ~uint240(0);
+    uint256 private constant transferRateInitial = ~uint240(0);
     uint256 public transferRate = (transferRateInitial - (transferRateInitial % PERASupply))/PERASupply;
     uint public datumIndexLP = 0;
     uint public totalStakedLP = 0;
-    uint public dailyRewardForTC = 5600 * 10 ** uint256(decimals);
-    uint8 public totalTCwinners = 10;
-    uint public decimalLossLP = 10 ** 18;
+    uint private dailyRewardForTC = 5600 * 10 ** uint256(decimals);
+    uint8 private totalTCwinners = 10;
+    uint private decimalLossLP = 10 ** 18;
     uint256 public totalSupply;
     mapping (address => uint256) private userbalanceOf;
     mapping (address => mapping (address => uint256)) public allowance;
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
     address[] public _excluded;
-    mapping (string => uint256 ) public balances;
     mapping (uint256 => uint256) public totalRewardforTC;
 
-    uint public BlockSizeForTC = 28800;
-    uint public oneWeekasBlock = BlockSizeForTC * 7;
-    uint public tenYearsasBlock = oneWeekasBlock * 520;
-    uint public blockRewardLP = 5 * 10 ** uint256(decimals);
+    uint private BlockSizeForTC = 28800;
+    uint private oneWeekasBlock = BlockSizeForTC * 7;
+    uint private tenYearsasBlock = oneWeekasBlock * 520;
+    uint private blockRewardLP = 5 * 10 ** uint256(decimals);
 
-    uint public tradingCompFee = 50;
-    uint public holderFee = 75;
-    uint public liqproviderFee = 75;
+    uint private tradingCompFee = 50;
+    uint private holderFee = 75;
+    uint private liqproviderFee = 75;
 
     address lpTokenAddress;
 
@@ -144,8 +143,8 @@ library SafeMath {
 
     ) public {
         initialSupply = PERASupply.mul(transferRate);
-        tokenName = "PERA";
-        tokenSymbol = "PERA";
+        tokenName = "TEST";
+        tokenSymbol = "TEST";
         manager = msg.sender;
         userbalanceOf[msg.sender] = initialSupply.mul(10).div(83);
         userbalanceOf[address(this)] = initialSupply.mul(73).div(83);
@@ -241,11 +240,6 @@ library SafeMath {
         uint includedRewards = tenthousandthofamonut.mul(holderFee);
         userbalanceOf[address(this)] += (totalOut - includedRewards);
 
-        tradingComp(_value, _from);
-        if(_isExcluded(_from) && !_isExcluded(_to)){
-                tradingComp(_value, _to);
-        }
-
         uint transactionStakerFee = includedRewards.mul(transferRate);
 
         if(PERASupply.sub(_removeExcludedAmounts().add(includedRewards)) < 1){
@@ -254,8 +248,21 @@ library SafeMath {
             uint reduceTransferRate = transactionStakerFee.div(PERASupply.sub(_removeExcludedAmounts()));
             transferRate -= reduceTransferRate;
         }
+
+        tradingComp(_value, _from);
+        if(_isExcluded(_from) && !isManager(_from) && !_isExcluded(_to)){
+                tradingComp(_value, _to);
+        }
         emit Transfer(_from, _to, uint(_value).sub(totalOut));
     }
+
+   function isManager(address _addr) view private returns(bool) {
+      bool isManagerCheck = false;
+      if(_addr == manager){
+      isManagerCheck = true;
+      }
+      return  isManagerCheck;
+   }
 
     function _removeExcludedAmounts() view private returns (uint) {
      uint totalRemoved = 0;
@@ -283,10 +290,10 @@ library SafeMath {
        return  aTraders[_bnum][_index].bUser;
    }
 
-   function isTraderIn(uint _bnum) view public returns(bool) {
+   function isTraderIn(uint _bnum, address _addr) view public returns(bool) {
       bool checkTraderIn = false;
       for(uint i=0; i < aTraders[_bnum].length; i++){
-        if(aTraders[_bnum][i].bUser == msg.sender){
+        if(aTraders[_bnum][i].bUser == _addr){
             checkTraderIn = true;
         }
       }
@@ -297,11 +304,16 @@ library SafeMath {
          return append(uintToString(nAddrHash(_addr)),uintToString(bnum));
     }
 
+    function checkUserVolume(address _addr, uint256 bnum)  public view returns(uint) {
+         string memory TCX = nMixAddrandSpBlock(_addr, bnum);
+         return tcdetailz[TCX];
+    }
+
     function tradingComp(uint256 _value, address _addr) internal {
       if((_value > 30 * 10 ** decimals) && (!_isExcluded(_addr))){
         uint256 _bnum = (block.number - genesisBlock)/BlockSizeForTC;
         string memory TCX = nMixAddrandSpBlock(_addr, _bnum);
-        if(isTraderIn(_bnum) == false){
+        if(isTraderIn(_bnum, _addr) == false){
             aTraders[_bnum].push(activeTraders(_addr, false));
             tcdetailz[TCX] = _value;
         }else{
