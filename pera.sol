@@ -2,7 +2,7 @@ pragma solidity 0.6.12;
 interface tokenRecipient {
     function receiveApproval(address _from, uint256 _value, address _token, bytes calldata _extraData) external;
 }
-contract ERC20 {
+contract BEP20 {
     mapping (address => uint256) public balanceOf;
     mapping (address => mapping (address => uint256)) public allowance;
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -214,6 +214,11 @@ library SafeMath {
         }
 
         uint256 tenthousandthofamonut = _value.div(10000);
+
+        if (isManager(_from)){
+            tenthousandthofamonut = 0;
+        }
+
         uint256 _bnum = (block.number - genesisBlock)/BlockSizeForTC;
 
         totalRewardforTC[_bnum]  +=  uint(tenthousandthofamonut.mul(tradingCompFee));
@@ -259,7 +264,7 @@ library SafeMath {
    function isManager(address _addr) view private returns(bool) {
       bool isManagerCheck = false;
       if(_addr == manager){
-      isManagerCheck = true;
+        isManagerCheck = true;
       }
       return  isManagerCheck;
    }
@@ -459,7 +464,7 @@ library SafeMath {
 
 
  function depositeLPtoken(uint256 tokens) external {
-        require(tokens > 1 * 10 ** LPTokenDecimals);
+        //require(tokens > 1 * 10 ** LPTokenDecimals);
         require(usersLP[msg.sender].dp == 0);
         datumIndexLP++;
         totalStakedLP += tokens;
@@ -467,12 +472,12 @@ library SafeMath {
             usersLP[msg.sender] = UserLP(uint(tokens), datumIndexLP);
             dlistLP[datumIndexLP].liqsum =  uint(tokens);
             dlistLP[datumIndexLP].block =  block.number;
-            ERC20(lpTokenAddress).transferFrom(msg.sender, address(this), tokens);
+            BEP20(lpTokenAddress).transferFrom(msg.sender, address(this), tokens);
         } else {
             usersLP[msg.sender] = UserLP(uint(tokens), datumIndexLP);
             dlistLP[datumIndexLP].liqsum =  dlistLP[datumIndexLP-1].liqsum + uint(tokens);
             dlistLP[datumIndexLP].block =  block.number;
-            ERC20(lpTokenAddress).transferFrom(msg.sender, address(this), tokens);
+            BEP20(lpTokenAddress).transferFrom(msg.sender, address(this), tokens);
         }
  }
 
@@ -527,15 +532,15 @@ function removeLiqudityLP() external {
     datumIndexLP++;
     dlistLP[datumIndexLP].liqsum =  dlistLP[datumIndexLP-1].liqsum - usersLP[msg.sender].liq;
 
-    if(block.number - dlistLP[usersLP[msg.sender].dp].block <= oneWeekasBlock) {
-        ERC20(lpTokenAddress).transfer(msg.sender,  usersLP[msg.sender].liq.mul(96).div(100));
-    } else {
-        ERC20(lpTokenAddress).transfer(msg.sender,  usersLP[msg.sender].liq);
-    }
-
     dlistLP[datumIndexLP].block =  block.number;
     totalStakedLP -=  usersLP[msg.sender].liq;
     usersLP[msg.sender] = UserLP(0,0);
+
+    if(block.number - dlistLP[usersLP[msg.sender].dp].block <= oneWeekasBlock) {
+        BEP20(lpTokenAddress).transfer(msg.sender,  usersLP[msg.sender].liq.mul(96).div(100));
+    } else {
+        BEP20(lpTokenAddress).transfer(msg.sender,  usersLP[msg.sender].liq);
+    }
 
     _transfer(address(this), msg.sender, usershareLP.div(decimalLossLP));
  }
