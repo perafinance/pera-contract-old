@@ -121,7 +121,7 @@ library SafeMath {
     uint private blockRewardLP = 5 * 10 ** uint256(decimals);
 
     uint256 public RewardMultiplier = 1;
-    uint256 public LPRate = 0;
+    uint256 public LPRate = 1;
     uint256 public FeeRewPoolLP = 0;
     uint private tradingCompFee = 50;
     uint private holderFee = 75;
@@ -589,11 +589,13 @@ library SafeMath {
         }
 
         uint256 distance = block.number - lastRewardBlock;
-        uint256 PERAEmissionReward = (RewardMultiplier.mul(blockRewardLP).mul(distance)).div(10);
+        //uint256 PERAEmissionReward = (RewardMultiplier.mul(blockRewardLP).mul(distance)).div(10);
+        uint256 PERAEmissionReward = 1 * 10 ** (decimals);
         uint PERAReward = PERAEmissionReward + FeeRewPoolLP;
         FeeRewPoolLP = 0;
         mint(PERAEmissionReward);
-        LPRate = LPRate.add(PERAReward.mul(1e12).div(_totalStakedLP));
+        //LPRate = LPRate.add(PERAReward.mul(1e12).div(_totalStakedLP));
+        LPRate = LPRate.add(LPRate.mul(PERAReward).div(_totalStakedLP));
         lastRewardBlock = block.number;
     }
 
