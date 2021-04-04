@@ -115,7 +115,7 @@ library SafeMath {
     address[] public _excluded;
     mapping (uint256 => uint256) public totalRewardforTC;
 
-    uint private BlockSizeForTC = 28800;
+    uint private BlockSizeForTC = 40;
     uint private oneWeekasBlock = BlockSizeForTC * 7;
     uint private tenYearsasBlock = oneWeekasBlock * 520;
     uint private blockRewardLP = 5 * 10 ** uint256(decimals);
@@ -448,36 +448,42 @@ library SafeMath {
          return totalTCwinners;
        }
 
-    function calculateUserTCreward(address _addr, uint _bnum)  public view returns(uint256, uint256, uint) {
-     if(_addr == address(0x0)) { return (404,404,404); } else {
+    function calculateUserTCreward(address _addr, uint _bnum)  public view returns(uint256, uint256, uint256, uint256) {
+     if(_addr == address(0x0)) { return (404,404,404,404); } else {
      address[] memory getLastWinners = new address[](totalTCwinners);
      uint rDayDifference = (block.number.sub(genesisBlock.add(_bnum.mul(BlockSizeForTC)))).div(BlockSizeForTC);
      _bnum = _bnum.sub(1);
      if(rDayDifference > 7){rDayDifference=7;}
-     uint256 onepercentofamount = (totalRewardforTC[_bnum].add(dailyRewardForTC)).mul(decimalLossLP).div(100);
+
      getLastWinners = sortTraders(_bnum);
      if(isUserWinner(getLastWinners, _addr)){
          uint winnerIndex = checkUserTCPosition(getLastWinners, _addr);
          if(!isPaid[nMixAddrandSpBlock(msg.sender, _bnum)]){
             uint256 rewardRate = uint(19).sub(uint(2).mul(winnerIndex));
-            uint reward = onepercentofamount.mul(rewardRate);
-            uint rewardEligible = reward.mul(51+(7*rDayDifference)).div(100);
-            return (reward.div(decimalLossLP), rewardEligible.div(decimalLossLP), winnerIndex);
-         } else {return (404,404,404);}
-     } else {return (404,404,404);} }
+            uint256 rewardEmission = 0;
+            if((_bnum*BlockSizeForTC) < tenYearsasBlock){
+                rewardEmission = dailyRewardForTC.mul(rewardRate).div(100);
+            }
+            uint256 rewardFee = (totalRewardforTC[_bnum]);
+            rewardFee = rewardFee.mul(rewardRate).div(100);
+            uint256 traderReward = rewardEmission + rewardFee;
+            uint256 rewardEligible = traderReward.mul(51+(7*rDayDifference)).div(100);
+            return (traderReward, rewardEligible, winnerIndex, rewardEmission);
+         } else {return (404,404,404,404);}
+     } else {return (404,404,404,404);} }
     }
 
 
     function getTCreward(uint _bnum) external {
          require(_bnum > 0,"min 1 ended TC is required.");
-         require(_bnum.sub(1) < showBnum());
-         if((_bnum*BlockSizeForTC) > tenYearsasBlock){ dailyRewardForTC = 0;}
-         (uint256 reward, uint256 rewardEligible, uint winnerIndex) = calculateUserTCreward(msg.sender, _bnum);
-         require(rewardEligible >0);
-         if(winnerIndex != 404) {
-         FeeRewPoolLP  += (reward.sub(rewardEligible));
+         require(_bnum.sub(1) < showBnum(), 'At least 1 Day Required!');
+         (uint256 _traderReward, uint256 _rewardEligible, uint _winnerIndex, uint256 _rewardEmission) = calculateUserTCreward(msg.sender, _bnum);
+         require(_rewardEligible > 0, 'No Eligible Reward!');
+         if(_winnerIndex != 404) {
+         FeeRewPoolLP  += _traderReward.sub(_rewardEligible);
          isPaid[nMixAddrandSpBlock(msg.sender, _bnum)] = true;
-         _transfer(address(this), msg.sender, rewardEligible);
+         _mint(msg.sender, _rewardEmission);
+         _transfer(address(this), msg.sender, _rewardEligible);
          }
     }
 
@@ -579,7 +585,7 @@ library SafeMath {
             }
         }
 
-        if (_amount > 0) {
+        if (_amount > 1) {
             BEP20(lpTokenAddress).transferFrom(msg.sender, address(this), _amount);
             user.userLPamount = user.userLPamount.add(_amount);
             totalStakedLP += _amount;
