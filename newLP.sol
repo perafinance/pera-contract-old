@@ -121,7 +121,7 @@ library SafeMath {
     uint private blockRewardLP = 5 * 10 ** uint256(decimals);
 
     uint256 public RewardMultiplier = 1;
-    uint256 public LPRate = 1;
+    uint256 public LPRate = 0;
     uint256 public FeeRewPoolLP = 0;
     uint private tradingCompFee = 50;
     uint private holderFee = 75;
@@ -540,16 +540,36 @@ library SafeMath {
         return string(abi.encodePacked(a,"-",b));
     }
 
+    function updateMultiplier(uint256 newMultiplier) public {
+        require(msg.sender == manager);
+        RewardMultiplier = newMultiplier;
+    }
 
+    // Return reward multiplier over the given _from to _to block.
+    function getDistReward(uint256 _from, uint256 _to) public view returns (uint256) {
+        return _to.sub(_from).mul(RewardMultiplier);
+    }
 
+    // View function to see pending PERAs on frontend.
+    function pendingPERA(address _user) external view returns (uint256) {
 
-
+        LPUserInfo storage user = userInfo[_user];
+        uint256 vLPRate = LPRate;
+        uint256 vtotalStakedLP = totalStakedLP;
+        if (block.number > lastRewardBlock && vtotalStakedLP != 0) {
+            uint256 distance = getDistReward(lastRewardBlock, block.number);
+            uint256 PERAEmissionReward = distance.mul(blockRewardLP).div(10);
+            uint PERAReward = PERAEmissionReward + FeeRewPoolLP;
+            vLPRate = vLPRate.add(PERAReward.mul(1e12).div(vtotalStakedLP));
+        }
+        return user.userLPamount.mul(vLPRate).div(1e12).sub(user.userReflectedLP)
+    }
 
 
  function depositLPtoken(uint256 _amount) external {
 
         LPUserInfo storage user = userInfo[msg.sender];
-        updateRate(totalStakedLP, _amount);
+        updateRate(totalStakedLP);
 
         if (user.userLPamount > 0) {
             uint256 pendingReward = user.userLPamount.mul(LPRate).div(1e12).sub(user.userReflectedLP);
@@ -566,7 +586,6 @@ library SafeMath {
         user.userReflectedLP = user.userLPamount.mul(LPRate).div(1e12);
  }
 
-
   struct LPUserInfo {
         uint256 userLPamount;
         uint256 userReflectedLP;
@@ -576,26 +595,21 @@ library SafeMath {
 
 
 
-  // Update reward variables of the given pool to be up-to-date.
-    function updateRate(uint256 _totalStakedLP, uint256 _amount) public {
-
+    function updateRate(uint256 _totalStakedLP) public {
         if (block.number <= lastRewardBlock) {
             return;
         }
-
         if (_totalStakedLP == 0) {
             lastRewardBlock = block.number;
             return;
         }
 
-        uint256 distance = block.number - lastRewardBlock;
-        //uint256 PERAEmissionReward = (RewardMultiplier.mul(blockRewardLP).mul(distance)).div(10);
-        uint256 PERAEmissionReward = 1 * 10 ** (decimals);
+        uint256 distance = getDistReward(lastRewardBlock, block.number);
+        uint256 PERAEmissionReward = distance.mul(blockRewardLP).div(10);
         uint PERAReward = PERAEmissionReward + FeeRewPoolLP;
         FeeRewPoolLP = 0;
         mint(PERAEmissionReward);
-        //LPRate = LPRate.add(PERAReward.mul(1e12).div(_totalStakedLP));
-        LPRate = LPRate.add(LPRate.mul(PERAReward).div(_totalStakedLP));
+        LPRate = LPRate.add(PERAReward.mul(1e12).div(_totalStakedLP));
         lastRewardBlock = block.number;
     }
 
@@ -613,13 +627,12 @@ library SafeMath {
         userbalanceOf[address(this)] = userbalanceOf[address(this)].add(amount);
     }
 
-
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _amount) public {
 
         LPUserInfo storage user = userInfo[msg.sender];
         require(user.userLPamount >= _amount, "withdraw: not good");
-        updateRate(totalStakedLP, _amount);
+        updateRate(totalStakedLP);
 
         uint256 pendingReward = user.userLPamount.mul(LPRate).div(1e12).sub(user.userReflectedLP);
         if(pendingReward > 0) {
@@ -627,22 +640,11 @@ library SafeMath {
         }
         if(_amount > 0) {
             user.userLPamount = user.userLPamount.sub(_amount);
-            BEP20(lpTokenAddress).transfer(msg.sender,  _amount);
             totalStakedLP -= _amount;
+            BEP20(lpTokenAddress).transferFrom(address(this), msg.sender, _amount);
         }
         user.userReflectedLP = user.userLPamount.mul(LPRate).div(1e12);
     }
-
-
-
-
- //function checkusersLP(address _addr) public view returns (uint256, uint256){
- //        return (usersLP[_addr].liq, usersLP[_addr].dp);
- // }
-
- // function checkdlistLP(uint256 _val) public view returns (uint256, uint256){
- //       return (dlistLP[_val].liqsum ,dlistLP[_val].prosum);
- //   }
 
     function addLPToken(address _addr)  external {
         require(msg.sender == manager);
