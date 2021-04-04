@@ -542,6 +542,7 @@ library SafeMath {
 
     function updateMultiplier(uint256 newMultiplier) public {
         require(msg.sender == manager);
+        require(newMultiplier >= 1 && newMultiplier <= 100, 'Multiplier Update Failed!');
         RewardMultiplier = newMultiplier;
     }
 
@@ -620,7 +621,7 @@ library SafeMath {
         totalSupply = totalSupply.add(amount);
         userbalanceOf[address(this)] = userbalanceOf[address(this)].add(amount);
     }
-    
+
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _amount) public {
 
