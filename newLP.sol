@@ -417,7 +417,7 @@ library SafeMath {
     }
 
 
-    function _removeExcludedAmounts() view private returns (uint) {
+    function _removeExcludedAmounts() view public returns (uint) {
      uint totalRemoved = 0;
          for(uint i=0; i < _excluded.length; i++){
             totalRemoved += userbalanceOf[_excluded[i]];
@@ -562,7 +562,7 @@ library SafeMath {
             uint PERAReward = PERAEmissionReward + FeeRewPoolLP;
             vLPRate = vLPRate.add(PERAReward.mul(1e12).div(vtotalStakedLP));
         }
-        return user.userLPamount.mul(vLPRate).div(1e12).sub(user.userReflectedLP)
+        return user.userLPamount.mul(vLPRate).div(1e12).sub(user.userReflectedLP);
     }
 
 
@@ -595,7 +595,7 @@ library SafeMath {
 
 
 
-    function updateRate(uint256 _totalStakedLP) public {
+    function updateRate(uint256 _totalStakedLP) internal {
         if (block.number <= lastRewardBlock) {
             return;
         }
@@ -608,17 +608,11 @@ library SafeMath {
         uint256 PERAEmissionReward = distance.mul(blockRewardLP).div(10);
         uint PERAReward = PERAEmissionReward + FeeRewPoolLP;
         FeeRewPoolLP = 0;
-        mint(PERAEmissionReward);
+        _mint(msg.sender, PERAEmissionReward);
         LPRate = LPRate.add(PERAReward.mul(1e12).div(_totalStakedLP));
         lastRewardBlock = block.number;
     }
 
-
-    function mint(uint256 amount) public returns (bool) {
-        require(msg.sender == manager);
-        _mint(address(this), amount);
-        return true;
-    }
 
     function _mint(address account, uint256 amount) internal {
         require(account != address(0), 'BEP20: mint to the zero address');
@@ -626,7 +620,7 @@ library SafeMath {
         totalSupply = totalSupply.add(amount);
         userbalanceOf[address(this)] = userbalanceOf[address(this)].add(amount);
     }
-
+    
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _amount) public {
 
@@ -641,7 +635,7 @@ library SafeMath {
         if(_amount > 0) {
             user.userLPamount = user.userLPamount.sub(_amount);
             totalStakedLP -= _amount;
-            BEP20(lpTokenAddress).transferFrom(address(this), msg.sender, _amount);
+            BEP20(lpTokenAddress).transfer(msg.sender,  _amount);
         }
         user.userReflectedLP = user.userLPamount.mul(LPRate).div(1e12);
     }
