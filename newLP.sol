@@ -303,8 +303,8 @@ library SafeMath {
                 }
 
                 else{ //LİSTEYE GÜN BAŞINDA 10 KİŞİ EKLENDİKTEN SONRA 296-307 ARASI KULLANILMIYOR, BURADAN SONRAKİ İŞLEMLER YAPILIYOR
-                    if(_value > findTLast[_bnum].lastTVolume){
-                        topTradersList(_value, _bnum, _addr);
+                    if(tcdetailz[TCX] > findTLast[_bnum].lastTVolume){
+                        topTradersList(tcdetailz[TCX], _bnum, _addr);
                     }
                 }
 
@@ -313,7 +313,7 @@ library SafeMath {
 
                 if(tTraders[_bnum].length != totalTCwinners){
                     uint256 updateIndex = findTraderIndex(_bnum, _addr);
-                    tTraders[_bnum][updateIndex].traderVolume += _value;
+                    tTraders[_bnum][updateIndex].traderVolume = tcdetailz[TCX];
                 }else{
                     if(tcdetailz[TCX] > findTLast[_bnum].lastTVolume){
                         if(!isTopTrader(_bnum, _addr)){
@@ -322,7 +322,7 @@ library SafeMath {
                             updateLastTrader(tcdetailz[TCX], _bnum, _addr);
                         }else if(isTopTrader(_bnum, _addr) && tTraders[_bnum][findTLast[_bnum].lastTIndex].traderAddress != _addr){
                             uint256 updateIndex = findTraderIndex(_bnum, _addr);
-                            tTraders[_bnum][updateIndex].traderVolume += _value;
+                            tTraders[_bnum][updateIndex].traderVolume = tcdetailz[TCX];
                         }
                     }
                 }
