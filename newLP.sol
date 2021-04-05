@@ -334,6 +334,7 @@ library SafeMath {
 
         if(_value < checkUserVolume(sortTraders(_bnum)[1], _bnum)){
             tTraders[_bnum][findTraderIndex(_bnum, _addr)].traderVolume = _value;
+            findTLast[_bnum].lastTVolume = _value;
         }
         else{
             uint256 minVolume = tTraders[_bnum][0].traderVolume;
