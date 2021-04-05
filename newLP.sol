@@ -289,8 +289,8 @@ library SafeMath {
                 if(tTraders[_bnum].length < totalTCwinners){
                     tTraders[_bnum].push(topTraders(_addr, _value));    //GÜN BAŞLANGICINDA 10 KULLANICIYI DİREKT LİSTEYE YERLEŞTİRİYOR
                     if(tTraders[_bnum].length == totalTCwinners){                   //LİSTE DOLDUĞUNDA SON SIRADAKİ KULLANICININ INDEX VE HACİM BİLGİSİNİ BUL
-                            uint minVolume = _value;
-                            uint minIndex = totalTCwinners-1;
+                            uint minVolume = tTraders[_bnum][0].traderVolume;
+                            uint minIndex = 0;
                         for(uint i=0; i<tTraders[_bnum].length; i++){   //LİSTEDEKİ 10 KİŞİYİ GEZEREK İÇLERİNDEN MİN HACİM VE INDEX DEĞERİNİ BUL
                             if(tTraders[_bnum][i].traderVolume < minVolume){
                                 minVolume = tTraders[_bnum][i].traderVolume; //İLK 10DAKİ EN DÜŞÜK HACİM DEĞERİ
