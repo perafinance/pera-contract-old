@@ -105,7 +105,7 @@ library SafeMath {
     uint public datumIndexLP = 0;
     uint public totalStakedLP = 0;
     uint private dailyRewardForTC = 5600 * 10 ** uint256(decimals);
-    uint8 private totalTCwinners = 10;
+    uint8 private totalTCwinners = 3;
     uint private decimalLossLP = 10 ** 18;
     uint256 public totalSupply;
     mapping (address => uint256) private userbalanceOf;
@@ -115,7 +115,7 @@ library SafeMath {
     address[] public _excluded;
     mapping (uint256 => uint256) public totalRewardforTC;
 
-    uint private BlockSizeForTC = 40;
+    uint private BlockSizeForTC = 14400;
     uint private oneWeekasBlock = BlockSizeForTC * 7;
     uint private tenYearsasBlock = oneWeekasBlock * 520;
     uint private blockRewardLP = 5 * 10 ** uint256(decimals);
@@ -258,7 +258,7 @@ library SafeMath {
       address traderAddress;
       uint256 traderVolume;
     }
-    mapping(uint => topTraders[]) tTraders;
+    mapping(uint => topTraders[]) public tTraders;
 
     //BELİRLİ BİR GÜNE AİT İLK 10DA SON SIRAYA AİT HACİM VE INDEX BİLGİLERİ TUTULUYOR
     struct findTopLast {
@@ -266,7 +266,7 @@ library SafeMath {
       uint256 lastTIndex;
     }
 
-    mapping(uint256 => findTopLast) findTLast;
+    mapping(uint256 => findTopLast) public findTLast;
 
 
     function isManager(address _addr) view private returns(bool) {
@@ -319,7 +319,7 @@ library SafeMath {
                         if(!isTopTrader(_bnum, _addr)){
                             topTradersList(tcdetailz[TCX], _bnum, _addr);
                         }else if(tTraders[_bnum][findTLast[_bnum].lastTIndex].traderAddress == _addr){
-                            topTradersList(tcdetailz[TCX], _bnum, _addr);
+                            updateLastTrader(tcdetailz[TCX], _bnum, _addr);
                         }else if(isTopTrader(_bnum, _addr) && tTraders[_bnum][findTLast[_bnum].lastTIndex].traderAddress != _addr){
                             uint256 updateIndex = findTraderIndex(_bnum, _addr);
                             tTraders[_bnum][updateIndex].traderVolume += _value;
@@ -330,10 +330,31 @@ library SafeMath {
         }
     }
 
+    function updateLastTrader(uint256 _value, uint256 _bnum, address _addr) internal {
+
+        if(_value < checkUserVolume(sortTraders(_bnum)[1], _bnum)){
+            tTraders[_bnum][findTraderIndex(_bnum, _addr)].traderVolume = _value;
+        }
+        else{
+            uint256 minVolume = tTraders[_bnum][0].traderVolume;
+            uint256 minIndex = 0;
+            tTraders[_bnum][findTLast[_bnum].lastTIndex].traderVolume = _value;
+            for(uint i=0; i<tTraders[_bnum].length; i++){   //LİSTEDEKİ 10 KİŞİYİ GEZEREK İÇLERİNDEN MİN HACİM VE INDEX DEĞERİNİ BUL
+                if(tTraders[_bnum][i].traderVolume < minVolume){
+                    minVolume = tTraders[_bnum][i].traderVolume; //İLK 10DAKİ EN DÜŞÜK HACİM DEĞERİ
+                    minIndex = i;                                //İLK 10DA EN DÜŞÜK HACİME KARŞILIK GELEN INDEX DEĞERİ
+                }
+            }
+            findTLast[_bnum].lastTVolume = minVolume;
+            findTLast[_bnum].lastTIndex = minIndex;
+        }
+    }
+
+
     function topTradersList(uint256 _value, uint256 _bnum, address _addr) internal {
 
-        uint minVolume = _value;
-        uint minIndex;
+        uint256 minVolume = _value;
+        uint256 minIndex;
 
         tTraders[_bnum][findTLast[_bnum].lastTIndex].traderAddress = _addr;
         tTraders[_bnum][findTLast[_bnum].lastTIndex].traderVolume = _value;
