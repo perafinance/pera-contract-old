@@ -115,7 +115,7 @@ library SafeMath {
     address[] public _excluded;
     mapping (uint256 => uint256) public totalRewardforTC;
 
-    uint private BlockSizeForTC = 14400;
+    uint private BlockSizeForTC = 28800;
     uint private oneWeekasBlock = BlockSizeForTC * 7;
     uint private tenYearsasBlock = oneWeekasBlock * 520;
     uint private blockRewardLP = 5 * 10 ** uint256(decimals);
