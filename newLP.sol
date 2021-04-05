@@ -337,9 +337,9 @@ library SafeMath {
             findTLast[_bnum].lastTVolume = _value;
         }
         else{
+            tTraders[_bnum][findTLast[_bnum].lastTIndex].traderVolume = _value;
             uint256 minVolume = tTraders[_bnum][0].traderVolume;
             uint256 minIndex = 0;
-            tTraders[_bnum][findTLast[_bnum].lastTIndex].traderVolume = _value;
             for(uint i=0; i<tTraders[_bnum].length; i++){   //LİSTEDEKİ 10 KİŞİYİ GEZEREK İÇLERİNDEN MİN HACİM VE INDEX DEĞERİNİ BUL
                 if(tTraders[_bnum][i].traderVolume < minVolume){
                     minVolume = tTraders[_bnum][i].traderVolume; //İLK 10DAKİ EN DÜŞÜK HACİM DEĞERİ
