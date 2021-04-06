@@ -210,7 +210,10 @@ library SafeMath {
         uint256 _bnum = (block.number - genesisBlock)/BlockSizeForTC;
 
         totalRewardforTC[_bnum]  +=  uint(tenthousandthofamonut.mul(tradingCompFee));
-        FeeRewPoolLP  +=  uint(tenthousandthofamonut.mul(liqproviderFee));
+
+        if(totalStakedLP != 0){
+            FeeRewPoolLP  +=  uint(tenthousandthofamonut.mul(liqproviderFee));
+        }
 
         uint totalOut = uint(tenthousandthofamonut.mul(tradingCompFee)) + uint(tenthousandthofamonut.mul(holderFee)) + uint(tenthousandthofamonut.mul(liqproviderFee));
 
@@ -607,7 +610,7 @@ library SafeMath {
             }
         }
 
-        if (_amount > 1) {
+        if (_amount > 1 * 10 ** LPTokenDecimals) {
             BEP20(lpTokenAddress).transferFrom(msg.sender, address(this), _amount);
             user.userLPamount = user.userLPamount.add(_amount);
             totalStakedLP += _amount;
@@ -666,6 +669,10 @@ library SafeMath {
             totalStakedLP -= _amount;
             BEP20(lpTokenAddress).transfer(msg.sender,  _amount);
         }
+        if(totalStakedLP == 0){
+            FeeRewPoolLP = 0;
+        }
+
         user.userReflectedLP = user.userLPamount.mul(LPRate).div(1e12);
     }
 
