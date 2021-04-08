@@ -63,7 +63,7 @@ library SafeMath {
     * @dev Integer division of two numbers, truncating the quotient.
     */
     function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
+        assert(b > 0);                  // Solidity automatically throws when dividing by 0
         uint256 c = a / b;
         // assert(a == b * c + a % b); // There is no case in which this doesn't hold
         return c;
@@ -88,50 +88,64 @@ library SafeMath {
 }
 
     contract TEST {
-    string public name;
-    address public manager;
-    string public symbol;
-    uint256 public decimals = 18;
-    uint256 private LPTokenDecimals = 18;
-    uint256 public genesisBlock = block.number;
-    uint256 public lastRewardBlock = 0;
-    uint256 public PERASupply = 10000000 * 10 ** uint256(decimals);
+    string public name;     //Token name
+    address public manager; //Contract owner address
+    string public symbol;   //Token symbol
+    uint256 public decimals = 18;               //Token decimals
+    uint256 private LPTokenDecimals = 18;       //Liquidity provider (LP) token decimals
+    uint256 public genesisBlock = block.number; //Block number of the contract creation
+    uint256 public lastRewardBlock = 0;         // Last block number that PERA distribution occurs
+    uint256 public PERASupply = 10000000 * 10 ** uint256(decimals); // Initial PERA supply
+    uint256 public totalSupply;
+
+    // Initial rate for holder reward distribution coefficient, used for rebasing holders' balances
     uint256 private constant transferRateInitial = ~uint240(0);
     uint256 public transferRate = (transferRateInitial - (transferRateInitial % PERASupply))/PERASupply;
 
-    uint256 private constant LPrewardRateInitial = ~uint240(0);
-    uint256 public LPrewardRate = (LPrewardRateInitial - (LPrewardRateInitial % PERASupply))/PERASupply;
-
-    uint public datumIndexLP = 0;
-    uint public totalStakedLP = 0;
+    // Daily PERA emission reward for trading competition reward pool
     uint private dailyRewardForTC = 5600 * 10 ** uint256(decimals);
-    uint8 private totalTCwinners = 3;
-    uint private decimalLossLP = 10 ** 18;
-    uint256 public totalSupply;
+    // Number of users with the highest daily volume who are eligible win the daily trading competition
+    uint8 private totalTCwinners = 10;
+
+    // Number of blocks within a day (approximately 28,800 blocks for Binance Smart Chain & 6500 blocks for Ethereum Network)
+    uint private BlockSizeForTC = 150;
+    // Number of blocks within a week
+    uint private oneWeekasBlock = BlockSizeForTC * 7;
+    // Number of blocks within 10 years (PERA emission stops after 10 years)
+    uint private tenYearsasBlock = oneWeekasBlock * 520;
+
+    // Total number of LP tokens staked in the contract
+    uint public totalStakedLP = 0;
+    // Contract releases 0.5 PERA/block as LP token staker reward (parameter is later divided by 10)
+    uint private blockRewardLP = 5 * 10 ** uint256(decimals);
+    // Contract deployer can set the reward multiplier within the range 1-10 (see function updateMultiplier)
+    // Initial value sets the LP token staker emission reward to 0.5 PERA/block
+    uint256 public RewardMultiplier = 1;
+    // Initial rate for LP token staker reward distribution coefficient
+    uint256 public LPRate = 0;
+    // Transaction fee rewards collected specifically for LP token stakers (0.75% of each PERA transaction)
+    uint256 public FeeRewPoolLP = 0;
+    // Smart contract address of the LP token (should be set by the contract owner, see function addLPToken)
+    address lpTokenAddress;
+    // Record of staked LP token amount for a given address
+    mapping (address => uint256) public userLPamount;
+
+    // PERA smart contract applies a 2% transaction fee on each on-chain PERA transaction
+    uint private tradingCompFee = 50; // Transaction fee rate for trading competition reward pool (0.50% of each PERA transaction)
+    uint private holderFee = 75;      // Transaction fee rate for holder rewards (0.75% of each PERA transaction)
+    uint private liqproviderFee = 75; // Transaction fee rate for LP token staker rewards (0.75% of each PERA transaction)
+
+    /// Record of total transaction fee rewards collected for the trading competition reward pool
+    mapping (uint256 => uint256) public totalRewardforTC;
+
+    address[] public _excluded;
+
     mapping (address => uint256) private userbalanceOf;
     mapping (address => mapping (address => uint256)) public allowance;
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
-    address[] public _excluded;
-    mapping (uint256 => uint256) public totalRewardforTC;
-
-    uint private BlockSizeForTC = 28800;
-    uint private oneWeekasBlock = BlockSizeForTC * 7;
-    uint private tenYearsasBlock = oneWeekasBlock * 520;
-    uint private blockRewardLP = 5 * 10 ** uint256(decimals);
-
-    uint256 public RewardMultiplier = 1;
-    uint256 public LPRate = 0;
-    uint256 public FeeRewPoolLP = 0;
-    uint private tradingCompFee = 50;
-    uint private holderFee = 75;
-    uint private liqproviderFee = 75;
-
-    address lpTokenAddress;
 
     using SafeMath for uint;
-
-    mapping (address => uint256) public userLPamount;
 
     constructor(
         uint256 initialSupply,
@@ -149,26 +163,15 @@ library SafeMath {
         symbol = tokenSymbol;
     }
 
-
-    function balanceOf(address _addr) public view returns (uint256) {
-      if (_isExcluded(_addr)){
-          return userbalanceOf[_addr];
-      } else{
-          return balanceRebalance(userbalanceOf[_addr]);
-      }
-    }
-
-    function balanceRebalance(uint256 userBalances) private view returns(uint256) {
-      return userBalances.div(transferRate);
-    }
-
-    function transferOwnership(address newOwner) public{
-        require(msg.sender == manager);   // Check if the sender is manager
-        if (newOwner != address(0)) {
-            manager = newOwner;
-        }
-    }
-
+    // Function can only be used by the contract owner
+    // Used for excluding an address as a holder
+    // Excluded addresses do not receive holder rewards (0.75% of each on-chain PERA transaction)
+    // Developer's suggestion: For the holder rewards to be distributed properly, contract owner should follow the following steps after the contract deployment:
+    // 1- Exclude the token smart contract address
+    // 2- Exclude the contract owner address
+    // 3- Exclude the AMM-exchange router contract address
+    // 4- Provide the initial liquidity to an AMM-exchange
+    // 5- Exclude the pool address where the initial liquidity is provided
     function excludeAccount(address account) public {
         require(msg.sender == manager);
         require(!_isExcluded(account));
@@ -176,6 +179,8 @@ library SafeMath {
         userbalanceOf[account] = userbalanceOf[account].div(transferRate);
     }
 
+    // Function can only be used by the contract owner
+    // Used for removing an address from the excluded holders list
     function includeAccount(address account) public {
     require(msg.sender == manager);
     require(_isExcluded(account));
@@ -189,10 +194,43 @@ library SafeMath {
         }
     }
 
+    // Function for checking if a given address is in the excluded holders list
+    function _isExcluded(address _addr) view public returns (bool) {
+        for(uint i=0; i < _excluded.length; i++){
+            if(_addr == _excluded[i]){
+                return  true;
+            }
+        }
+    return false;
+    }
+
+    // User balances are represented in two different ways:
+    // 1- If the address is excluded then the balance remains as it is
+    // 2- If the address is not excluded then the balance is weighted with the lastly updated value of the transferRate (see function balanceRebalance)
+    function balanceOf(address _addr) public view returns (uint256) {
+      if (_isExcluded(_addr)){
+          return userbalanceOf[_addr];
+      } else{
+          return balanceRebalance(userbalanceOf[_addr]);
+      }
+    }
+
+    function balanceRebalance(uint256 userBalances) private view returns(uint256) {
+      return userBalances.div(transferRate);
+    }
+
+    function transferOwnership(address newOwner) public{
+        require(msg.sender == manager);
+        if (newOwner != address(0)) {
+            manager = newOwner;
+        }
+    }
 
     function _transfer(address _from, address _to, uint _value) internal {
         require(_to != address(0x0));
 
+        // Checks whether the transaction sender is an excluded address
+        // Balance checks should be weighted with the lastly updated value of the transferRate for non-excluded addresses
         if(!_isExcluded(_from)){
             require(userbalanceOf[_from].div(transferRate) >= _value);
             require(userbalanceOf[_to].div(transferRate) + _value >= userbalanceOf[_to].div(transferRate));
@@ -201,22 +239,28 @@ library SafeMath {
             require(userbalanceOf[_to] + _value >= userbalanceOf[_to]);
         }
 
-        uint256 tenthousandthofamonut = _value.div(10000);
 
+        // 1/10000 of the transacted amount
+        // If the transaction sender is the contract owner then no fee is applied on the transaction
+        uint256 tenthousandthofamonut = _value.div(10000);
         if (isManager(_from)){
             tenthousandthofamonut = 0;
         }
 
+        // How many days have passed since the contract creation
         uint256 _bnum = (block.number - genesisBlock)/BlockSizeForTC;
-
+        // 0.5% of the transacted amount is added to the daily trading competition reward pool
         totalRewardforTC[_bnum]  +=  uint(tenthousandthofamonut.mul(tradingCompFee));
-
+        // 0.75% of the transacted amount is added to the LP token staker rewards
+        // If there is no LP token staked in the contract, then the amount is set to zero
         if(totalStakedLP != 0){
             FeeRewPoolLP  +=  uint(tenthousandthofamonut.mul(liqproviderFee));
         }
 
+        // Total amount of tokens taken out as the transaction fee (2% of the transacted amount)
         uint totalOut = uint(tenthousandthofamonut.mul(tradingCompFee)) + uint(tenthousandthofamonut.mul(holderFee)) + uint(tenthousandthofamonut.mul(liqproviderFee));
 
+        // Balance updates are again should be done by considering whether the transaction sender or the receiver is an excluded address or not
         if ((_isExcluded(_to)) && (_isExcluded(_from))){
             userbalanceOf[_from] -= _value;
             userbalanceOf[_to] +=   (_value).sub(totalOut);
@@ -233,11 +277,17 @@ library SafeMath {
             userbalanceOf[_to] +=   transferAmount.mul(transferRate);
         }
 
+        // 0.75% of an on-chain transaction is instantly distributed to the token holders, so the amount belongs to non-excluded addresses
+        // Remaining 1.25% of the transaction fee is sent to the smart contract, so to an excluded address
         uint includedRewards = tenthousandthofamonut.mul(holderFee);
         userbalanceOf[address(this)] += (totalOut - includedRewards);
-
+        // Amount of tokens to be sent to the token holders
         uint transactionStakerFee = includedRewards.mul(transferRate);
 
+        // If a transaction occurs when there is not a non-excluded address for distributing the holder rewards
+        // then the rewards are sent to the smart contract
+        // If a transaction occurs when there is at least one non-excluded address for distributing the holder rewards
+        // then the transferRate is updated with a rate of "transferRate * (Amount of holder rewards to be distributed/Total amount tokens within the non-excluded addresses)"
         if(PERASupply.sub(_removeExcludedAmounts().add(includedRewards)) < 1){
             userbalanceOf[address(this)] += includedRewards;
         }else{
@@ -245,33 +295,41 @@ library SafeMath {
             transferRate -= reduceTransferRate;
         }
 
-        tradingComp(_value, _from, _bnum); //BNUM DEĞERİ FONKSİYONA EKLENDİ
+        // Parameters to be sent to the daily trading competition functions:
+        // Transacted amount (_value)
+        // Address of the user
+            // If the transaction sender is a non-excluded address then the _from address is sent
+            // If the transaction sender is an excluded address then the _to address is sent
+        // How many days have passed since the contract creation (_bnum)
+        tradingComp(_value, _from, _bnum);
         if(_isExcluded(_from) && !isManager(_from) && !_isExcluded(_to)){
                 tradingComp(_value, _to, _bnum);
         }
         emit Transfer(_from, _to, uint(_value).sub(totalOut));
     }
 
-
+   // Checks whether a trading competition winner claimed its competition rewards or not
    mapping (string => bool) public isPaid;
+   // Checks if a given address has made an on-chain transaction for a given day
    mapping (string => bool) public isTraderIn;
 
-    //İLK 10 TRADER'IN ADRES VE HACİM BİLGİSİ TUTULUYOR
+    // traderAddress: Address of a Top-10 volume generator for a given day
+    // traderVolume: Daily volume of the Top-10 traders (volume generators) for a given day
     struct topTraders {
       address traderAddress;
       uint256 traderVolume;
     }
     mapping(uint => topTraders[]) public tTraders;
 
-    //BELİRLİ BİR GÜNE AİT İLK 10DA SON SIRAYA AİT HACİM VE INDEX BİLGİLERİ TUTULUYOR
+    // lastTVolume: Daily volume of the Top-10 volume generators for a given day
+    // lastTIndex: Index of the trader who has the least volume within the Top-10 traders list (tTraders list)
     struct findTopLast {
       uint256 lastTVolume;
       uint256 lastTIndex;
     }
-
     mapping(uint256 => findTopLast) public findTLast;
 
-
+    // Checks whether a given address is the contract owner or not
     function isManager(address _addr) view private returns(bool) {
         bool isManagerCheck = false;
         if(_addr == manager){
@@ -280,45 +338,58 @@ library SafeMath {
     return  isManagerCheck;
     }
 
-
+    //PERA Sort Algorithm:
     function tradingComp(uint256 _value, address _addr, uint _bnum) internal {
+        // Check if the transacted amount is more than 100 PERA tokens and the given address is in the excluded holders list
         if((_value > 100 * 10 ** decimals) && (!_isExcluded(_addr))){
         string memory TCX = nMixAddrandSpBlock(_addr, _bnum);
-
-            if(!isTraderIn[TCX]){                      //KULLANICI DAHA ÖNCE TRADER LİSTESİNE GİRMİŞ MİYDİ?
+            // Check if the trader address has previously made an on-chain transaction
+            if(!isTraderIn[TCX]){
                isTraderIn[TCX] = true;
-                tcdetailz[TCX] = _value;
-
+               // Update trader's daily trading volume
+               tcdetailz[TCX] = _value;
+                // Check if the length of the tTraders list has reached 10
                 if(tTraders[_bnum].length < totalTCwinners){
-                    tTraders[_bnum].push(topTraders(_addr, _value));    //GÜN BAŞLANGICINDA 10 KULLANICIYI DİREKT LİSTEYE YERLEŞTİRİYOR
-                    if(tTraders[_bnum].length == totalTCwinners){                   //LİSTE DOLDUĞUNDA SON SIRADAKİ KULLANICININ INDEX VE HACİM BİLGİSİNİ BUL
+                    // Push user's address and daily volume to tTraders list
+                    tTraders[_bnum].push(topTraders(_addr, _value));
+                    // If the tTraders list is full (There are 10 useres within the list)
+                    // Find the minimum daily volume value within the Top-10 list (tTraders list)
+                    if(tTraders[_bnum].length == totalTCwinners){
                             uint minVolume = tTraders[_bnum][0].traderVolume;
                             uint minIndex = 0;
-                        for(uint i=0; i<tTraders[_bnum].length; i++){   //LİSTEDEKİ 10 KİŞİYİ GEZEREK İÇLERİNDEN MİN HACİM VE INDEX DEĞERİNİ BUL
+                        for(uint i=0; i<tTraders[_bnum].length; i++){
                             if(tTraders[_bnum][i].traderVolume < minVolume){
-                                minVolume = tTraders[_bnum][i].traderVolume; //İLK 10DAKİ EN DÜŞÜK HACİM DEĞERİ
-                                minIndex = i;                                //İLK 10DA EN DÜŞÜK HACİME KARŞILIK GELEN INDEX DEĞERİ
+                                minVolume = tTraders[_bnum][i].traderVolume;
+                                minIndex = i;
                             }
                         }
-                    findTLast[_bnum].lastTVolume = minVolume; //İLK 10DAKİ MİNİMUM HACİM VE KARŞILIK GELEN INDEX DEĞERİ
+                    // lastTVolume: Minimum daily volume within the Top-10 traders
+                    // lastTIndex: Index of the trader who has the least volume within the Top-10 traders list
+                    findTLast[_bnum].lastTVolume = minVolume;
                     findTLast[_bnum].lastTIndex = minIndex;
                     }
                 }
 
-                else{ //LİSTEYE GÜN BAŞINDA 10 KİŞİ EKLENDİKTEN SONRA 296-307 ARASI KULLANILMIYOR, BURADAN SONRAKİ İŞLEMLER YAPILIYOR
+                else{
                     if(tcdetailz[TCX] > findTLast[_bnum].lastTVolume){
                         topTradersList(tcdetailz[TCX], _bnum, _addr);
                     }
                 }
-
-            }else{
+            }
+            // The trader address has previously made an on-chain transaction
+            else{
+                // Update trader's daily trading volume
                 tcdetailz[TCX] += _value;
-
+                // Check if length of the tTraders list has reached 10
+                // If not, then find the user's index within the tTraders list and update the volume on the corresponding index point
                 if(tTraders[_bnum].length != totalTCwinners){
                     uint256 updateIndex = findTraderIndex(_bnum, _addr);
                     tTraders[_bnum][updateIndex].traderVolume = tcdetailz[TCX];
+                // If length of the tTraders list has reached 10
                 }else{
+                    // Check if the trader's volume is larger than the minimum daily volume within the Top-10 traders list
                     if(tcdetailz[TCX] > findTLast[_bnum].lastTVolume){
+
                         if(!isTopTrader(_bnum, _addr)){
                             topTradersList(tcdetailz[TCX], _bnum, _addr);
                         }else if(tTraders[_bnum][findTLast[_bnum].lastTIndex].traderAddress == _addr){
@@ -343,10 +414,10 @@ library SafeMath {
             tTraders[_bnum][findTLast[_bnum].lastTIndex].traderVolume = _value;
             uint256 minVolume = tTraders[_bnum][0].traderVolume;
             uint256 minIndex;
-            for(uint i=0; i<tTraders[_bnum].length; i++){   //LİSTEDEKİ 10 KİŞİYİ GEZEREK İÇLERİNDEN MİN HACİM VE INDEX DEĞERİNİ BUL
+            for(uint i=0; i<tTraders[_bnum].length; i++){
                 if(tTraders[_bnum][i].traderVolume < minVolume){
-                    minVolume = tTraders[_bnum][i].traderVolume; //İLK 10DAKİ EN DÜŞÜK HACİM DEĞERİ
-                    minIndex = i;                                //İLK 10DA EN DÜŞÜK HACİME KARŞILIK GELEN INDEX DEĞERİ
+                    minVolume = tTraders[_bnum][i].traderVolume;
+                    minIndex = i;
                 }
             }
             findTLast[_bnum].lastTVolume = minVolume;
@@ -362,24 +433,16 @@ library SafeMath {
 
         tTraders[_bnum][findTLast[_bnum].lastTIndex].traderAddress = _addr;
         tTraders[_bnum][findTLast[_bnum].lastTIndex].traderVolume = _value;
-        for(uint i=0; i<tTraders[_bnum].length; i++){   //LİSTEDEKİ 10 KİŞİYİ GEZEREK İÇLERİNDEN MİN HACİM VE INDEX DEĞERİNİ BUL
+        for(uint i=0; i<tTraders[_bnum].length; i++){
             if(tTraders[_bnum][i].traderVolume < minVolume){
-                minVolume = tTraders[_bnum][i].traderVolume; //İLK 10DAKİ EN DÜŞÜK HACİM DEĞERİ
-                minIndex = i;                                //İLK 10DA EN DÜŞÜK HACİME KARŞILIK GELEN INDEX DEĞERİ
+                minVolume = tTraders[_bnum][i].traderVolume;
+                minIndex = i;
             }
         }
         findTLast[_bnum].lastTVolume = minVolume;
         findTLast[_bnum].lastTIndex = minIndex;
     }
 
-    function _isExcluded(address _addr) view public returns (bool) { //WHILE KULLANILARAK TRUE OLDUĞU ANDA LOOP DURDURULABİLİR Mİ?
-        for(uint i=0; i < _excluded.length; i++){
-            if(_addr == _excluded[i]){
-                return  true;
-            }
-        }
-    return false;
-    }
 
     function isTopTrader(uint _bnum, address _addr) view public returns(bool) {
         bool checkTopTrader;
@@ -400,7 +463,6 @@ library SafeMath {
       }
       return  checkIndex;
    }
-
 
 
     function checkTopTraderList(uint _bnum, uint _Ranking) view public returns(address) {
@@ -476,9 +538,9 @@ library SafeMath {
     function calculateUserTCreward(address _addr, uint _bnum)  public view returns(uint256, uint256, uint256, uint256) {
      if(_addr == address(0x0)) { return (404,404,404,404); } else {
      address[] memory getLastWinners = new address[](totalTCwinners);
-     uint rDayDifference = (block.number.sub(genesisBlock.add(_bnum.mul(BlockSizeForTC)))).div(BlockSizeForTC);
+     //uint rDayDifference = (block.number.sub(genesisBlock.add(_bnum.mul(BlockSizeForTC)))).div(BlockSizeForTC);
      _bnum = _bnum.sub(1);
-     if(rDayDifference > 7){rDayDifference=7;}
+     //if(rDayDifference > 7){rDayDifference=7;}
 
      getLastWinners = sortTraders(_bnum);
      if(isUserWinner(getLastWinners, _addr)){
@@ -487,12 +549,16 @@ library SafeMath {
             uint256 rewardRate = uint(19).sub(uint(2).mul(winnerIndex));
             uint256 rewardEmission = 0;
             if((_bnum*BlockSizeForTC) < tenYearsasBlock){
-                rewardEmission = dailyRewardForTC.mul(rewardRate).div(100);
+                rewardEmission = dailyRewardForTC.mul(rewardRate).div(100); // Total emission reward for the user
             }
-            uint256 rewardFee = (totalRewardforTC[_bnum]);
+            uint256 rewardFee = totalRewardforTC[_bnum];
             rewardFee = rewardFee.mul(rewardRate).div(100);
             uint256 traderReward = rewardEmission + rewardFee;
-            uint256 rewardEligible = traderReward.mul(51+(7*rDayDifference)).div(100);
+
+            //rewardFee = rewardFee.mul(51+(7*rDayDifference)).div(100);              // Eligible transaction fee rewards
+            //rewardEmission = rewardEmission.mul(51+(7*rDayDifference)).div(100);    // Eligible emission rewards
+            //uint256 rewardEligible = traderReward.mul(51+(7*rDayDifference)).div(100);
+            uint256 rewardEligible = traderReward;
             return (traderReward, rewardEligible, winnerIndex, rewardEmission);
          } else {return (404,404,404,404);}
      } else {return (404,404,404,404);} }
@@ -505,7 +571,6 @@ library SafeMath {
          (uint256 _traderReward, uint256 _rewardEligible, uint _winnerIndex, uint256 _rewardEmission) = calculateUserTCreward(msg.sender, _bnum);
          require(_rewardEligible > 0, 'No Eligible Reward!');
          if(_winnerIndex != 404) {
-         FeeRewPoolLP  += _traderReward.sub(_rewardEligible);
          isPaid[nMixAddrandSpBlock(msg.sender, _bnum)] = true;
          _mint(msg.sender, _rewardEmission);
          _transfer(address(this), msg.sender, _rewardEligible);
@@ -573,7 +638,7 @@ library SafeMath {
 
     function updateMultiplier(uint256 newMultiplier) public {
         require(msg.sender == manager);
-        require(newMultiplier >= 1 && newMultiplier <= 100, 'Multiplier Update Failed!');
+        require(newMultiplier >= 1 && newMultiplier <= 10, 'Multiplier Update Failed!');
         RewardMultiplier = newMultiplier;
     }
 
@@ -638,6 +703,9 @@ library SafeMath {
 
         uint256 distance = getDistReward(lastRewardBlock, block.number);
         uint256 PERAEmissionReward = distance.mul(blockRewardLP).div(10);
+        if((block.number - genesisBlock) > tenYearsasBlock){
+            PERAEmissionReward = 0;
+        }
         uint PERAReward = PERAEmissionReward + FeeRewPoolLP;
         FeeRewPoolLP = 0;
         _mint(msg.sender, PERAEmissionReward);
