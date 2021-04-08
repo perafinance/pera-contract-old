@@ -239,11 +239,10 @@ library SafeMath {
             require(userbalanceOf[_to] + _value >= userbalanceOf[_to]);
         }
 
-
         // 1/10000 of the transacted amount
         // If the transaction sender is the contract owner then no fee is applied on the transaction
         uint256 tenthousandthofamonut = _value.div(10000);
-        if (isManager(_from)){
+        if (isManager(_from) || _from == address(this)){
             tenthousandthofamonut = 0;
         }
 
@@ -559,21 +558,20 @@ library SafeMath {
             //rewardEmission = rewardEmission.mul(51+(7*rDayDifference)).div(100);    // Eligible emission rewards
             //uint256 rewardEligible = traderReward.mul(51+(7*rDayDifference)).div(100);
             uint256 rewardEligible = traderReward;
-            return (traderReward, rewardEligible, winnerIndex, rewardEmission);
+            return (rewardFee, rewardEligible, winnerIndex, rewardEmission);
          } else {return (404,404,404,404);}
      } else {return (404,404,404,404);} }
     }
 
-
     function getTCreward(uint _bnum) external {
          require(_bnum > 0,"min 1 ended TC is required.");
-         require(_bnum.sub(1) < showBnum(), 'At least 1 Day Required!');
-         (uint256 _traderReward, uint256 _rewardEligible, uint _winnerIndex, uint256 _rewardEmission) = calculateUserTCreward(msg.sender, _bnum);
+         require(_bnum.sub(1) < showBnum(), 'At least 1 day is Required!');
+         (uint256 _rewardFee, uint256 _rewardEligible, uint _winnerIndex, uint256 _rewardEmission) = calculateUserTCreward(msg.sender, _bnum);
          require(_rewardEligible > 0, 'No Eligible Reward!');
          if(_winnerIndex != 404) {
          isPaid[nMixAddrandSpBlock(msg.sender, _bnum)] = true;
+         _transfer(address(this), msg.sender, _rewardFee);
          _mint(msg.sender, _rewardEmission);
-         _transfer(address(this), msg.sender, _rewardEligible);
          }
     }
 
@@ -718,7 +716,7 @@ library SafeMath {
         require(account != address(0), 'BEP20: mint to the zero address');
 
         totalSupply = totalSupply.add(amount);
-        userbalanceOf[address(this)] = userbalanceOf[address(this)].add(amount);
+        userbalanceOf[account] += amount.mul(transferRate);
     }
 
     // Withdraw LP tokens from MasterChef.
