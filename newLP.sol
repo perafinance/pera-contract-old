@@ -534,12 +534,12 @@ library SafeMath {
          return totalTCwinners;
        }
 
-    function calculateUserTCreward(address _addr, uint _bnum)  public view returns(uint256, uint256, uint256, uint256) {
-     if(_addr == address(0x0)) { return (404,404,404,404); } else {
+    function calculateUserTCreward(address _addr, uint _bnum)  public view returns(uint256, uint256, uint256, uint256, uint256) {
+     if(_addr == address(0x0)) { return (404,404,404,404,404); } else {
      address[] memory getLastWinners = new address[](totalTCwinners);
-     //uint rDayDifference = (block.number.sub(genesisBlock.add(_bnum.mul(BlockSizeForTC)))).div(BlockSizeForTC);
+     uint rDayDifference = (block.number.sub(genesisBlock.add(_bnum.mul(BlockSizeForTC)))).div(BlockSizeForTC);
      _bnum = _bnum.sub(1);
-     //if(rDayDifference > 7){rDayDifference=7;}
+     if(rDayDifference > 7){rDayDifference=7;}
 
      getLastWinners = sortTraders(_bnum);
      if(isUserWinner(getLastWinners, _addr)){
@@ -554,24 +554,23 @@ library SafeMath {
             rewardFee = rewardFee.mul(rewardRate).div(100);
             uint256 traderReward = rewardEmission + rewardFee;
 
-            //rewardFee = rewardFee.mul(51+(7*rDayDifference)).div(100);              // Eligible transaction fee rewards
-            //rewardEmission = rewardEmission.mul(51+(7*rDayDifference)).div(100);    // Eligible emission rewards
-            //uint256 rewardEligible = traderReward.mul(51+(7*rDayDifference)).div(100);
-            uint256 rewardEligible = traderReward;
-            return (rewardFee, rewardEligible, winnerIndex, rewardEmission);
-         } else {return (404,404,404,404);}
-     } else {return (404,404,404,404);} }
+            rewardFee = rewardFee.mul(51+(7*rDayDifference)).div(100);              // Eligible transaction fee rewards
+            rewardEmission = rewardEmission.mul(51+(7*rDayDifference)).div(100);    // Eligible emission rewards
+            uint256 traderRewardEligible = traderReward.mul(51+(7*rDayDifference)).div(100);
+            return (traderReward, traderRewardEligible, winnerIndex, rewardEmission, rewardFee);
+         } else {return (404,404,404,404,404);}
+     } else {return (404,404,404,404,404);} }
     }
 
     function getTCreward(uint _bnum) external {
          require(_bnum > 0,"min 1 ended TC is required.");
          require(_bnum.sub(1) < showBnum(), 'At least 1 day is Required!');
-         (uint256 _rewardFee, uint256 _rewardEligible, uint _winnerIndex, uint256 _rewardEmission) = calculateUserTCreward(msg.sender, _bnum);
-         require(_rewardEligible > 0, 'No Eligible Reward!');
+         (uint256 _traderReward, uint256 _traderRewardEligible, uint _winnerIndex, uint256 _rewardEmission, uint256 _rewardFee) = calculateUserTCreward(msg.sender, _bnum);
+         require(_traderRewardEligible > 0, 'No Eligible Reward!');
          if(_winnerIndex != 404) {
          isPaid[nMixAddrandSpBlock(msg.sender, _bnum)] = true;
-         _transfer(address(this), msg.sender, _rewardFee);
          _mint(msg.sender, _rewardEmission);
+         _transfer(address(this), msg.sender, _traderRewardEligible);
          }
     }
 
@@ -717,7 +716,7 @@ library SafeMath {
 
         totalSupply = totalSupply.add(amount);
         PERASupply = PERASupply.add(amount);
-        userbalanceOf[account] += amount.mul(transferRate);
+        userbalanceOf[address(this)] += amount;
     }
 
     // Withdraw LP tokens from MasterChef.
