@@ -443,7 +443,7 @@ library SafeMath {
         tTraders[_bnum][findTLast[_bnum].lastTIndex].traderAddress = _addr;
         tTraders[_bnum][findTLast[_bnum].lastTIndex].traderVolume = _value;
         for(uint i=0; i<tTraders[_bnum].length; i++){
-            if(tTraders[_bnum][i].traderVolume < minVolume){
+            if(tTraders[_bnum][i].traderVolume <= minVolume){
                 minVolume = tTraders[_bnum][i].traderVolume;
                 minIndex = i;
             }
