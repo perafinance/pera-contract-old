@@ -108,7 +108,7 @@ library SafeMath {
     uint8 private totalTCwinners = 10;
 
     // Number of blocks within a day (approximately 28,800 blocks for Binance Smart Chain & 6500 blocks for Ethereum Network)
-    uint private BlockSizeForTC = 80;
+    uint private BlockSizeForTC = 28800;
     // Number of blocks within a week
     uint private oneWeekasBlock = BlockSizeForTC * 7;
     // Number of blocks within 10 years (PERA emission stops after 10 years)
