@@ -102,7 +102,7 @@ library SafeMath {
     uint256 private constant transferRateInitial = ~uint240(0);
     uint256 public transferRate = (transferRateInitial - (transferRateInitial % PERASupply))/PERASupply;
     // Number of blocks within a day (approximately 28,800 blocks for Binance Smart Chain & 6500 blocks for Ethereum Network)
-    uint private BlockSizeForTC = 14400;
+    uint private BlockSizeForTC = 200;
     // Number of blocks within a week
     uint private oneWeekasBlock = BlockSizeForTC * 7;
     // Number of blocks within 10 years (PERA emission stops after 10 years)
@@ -111,8 +111,8 @@ library SafeMath {
     // Daily PERA emission reward for trading competition (TC) reward pool
     uint private dailyRewardForTC = 2800 * 10 ** uint256(decimals);
     // Contract deployer can set the reward multiplier within the range 1-5 (see function updateTCMultiplier)
-    // Initial value, 2, sets the trading competition emission reward to 5600 PERA/day
-    uint256 public TCRewardMultiplier = 2;
+    // Initial value, 20, sets the trading competition emission reward to 5600 PERA/day
+    uint256 public TCRewardMultiplier = 20;
     // Number of users with the highest daily volume who are eligible to win the daily trading competition
     uint8 private totalTCwinners = 10;
     // Contract deployer can set the minimum PERA transaction that is required for the trading competition within the range 10-1000
@@ -126,8 +126,8 @@ library SafeMath {
     // Contract releases 0.5 PERA/block as LP token staker reward
     uint private blockRewardLP = 5 * 10 ** uint256(decimals);
     // Contract deployer can set the reward multiplier within the range 1-10 (see function updateLPMultiplier)
-    // Initial value, 2, sets the LP token staker emission reward to 0.5 PERA/block
-    uint256 public LPRewardMultiplier = 2;
+    // Initial value, 20, sets the LP token staker emission reward to 0.5 PERA/block
+    uint256 public LPRewardMultiplier = 20;
     // Initial rate for LP token staker reward distribution coefficient (LPRate)
     uint256 public LPRate = 0;
     // Transaction fee rewards collected specifically for LP token stakers (0.75% of each PERA transaction)
@@ -249,19 +249,19 @@ library SafeMath {
 
     // Function can only be used by the contract owner
     // It is used to set the reward multiplier for LP token stakers
-    // Initial value is set to 2 (0,5 PERA/block)
+    // Initial value is set to 20 (0,5 PERA/block)
     function updateLPMultiplier(uint256 newLPMultiplier) external {
         require(msg.sender == manager);
-        require(newLPMultiplier >= 1 && newLPMultiplier <= 20, 'Multiplier is out of the acceptable range!');
+        require(newLPMultiplier >= 10 && newLPMultiplier <= 200, 'Multiplier is out of the acceptable range!');
         LPRewardMultiplier = newLPMultiplier;
     }
 
     // Function can only be used by the contract owner
     // It is used to set the reward multiplier for the trading competition reward pool
-    // Initial value is set to 2 (5600 PERA/day)
+    // Initial value is set to 20 (5600 PERA/day)
     function updateTCMultiplier(uint256 newTCMultiplier) external {
         require(msg.sender == manager);
-        require(newTCMultiplier >= 1 && newTCMultiplier <= 5, 'Multiplier is out of the acceptable range!');
+        require(newTCMultiplier >= 10 && newTCMultiplier <= 100, 'Multiplier is out of the acceptable range!');
         TCRewardMultiplier = newTCMultiplier;
     }
 
@@ -628,7 +628,7 @@ library SafeMath {
             // If 10 years have passed since the contract creation, then the emission reward = 0
             uint256 rewardEmission = 0;
             if((_bnum*BlockSizeForTC) < tenYearsasBlock){
-                rewardEmission = dailyRewardForTC.mul(TCRewardMultiplier).mul(rewardRate).div(100); // Total emission reward for the user
+                rewardEmission = dailyRewardForTC.mul(TCRewardMultiplier).mul(rewardRate).div(1000); // Total emission reward for the user
             }
             uint256 rewardFee = totalRewardforTC[_bnum];
             rewardFee = rewardFee.mul(rewardRate).div(100);     // Total transaction fee reward for the user
@@ -710,7 +710,7 @@ library SafeMath {
         uint256 vtotalStakedLP = totalStakedLP;
         if (block.number > lastRewardBlock && vtotalStakedLP != 0) {
             uint256 distance = getDistReward(lastRewardBlock, block.number);
-            uint256 PERAEmissionReward = distance.mul(blockRewardLP).div(20);
+            uint256 PERAEmissionReward = distance.mul(blockRewardLP).div(200);
             uint PERAReward = PERAEmissionReward + FeeRewPoolLP;
             vLPRate = vLPRate.add(PERAReward.mul(1e12).div(vtotalStakedLP));
         }
@@ -730,8 +730,8 @@ library SafeMath {
             }
         }
         if (_amount > 1 * 10 ** LPTokenDecimals) {
-            user.userLPamount = user.userLPamount.add(_amount);
             totalStakedLP += _amount;
+            user.userLPamount = user.userLPamount.add(_amount);
             BEP20(lpTokenAddress).transferFrom(msg.sender, address(this), _amount);
         }
         user.userReflectedLP = user.userLPamount.mul(LPRate).div(1e12);
@@ -748,7 +748,7 @@ library SafeMath {
         }
 
         uint256 distance = getDistReward(lastRewardBlock, block.number);
-        uint256 PERAEmissionReward = distance.mul(blockRewardLP).div(20);
+        uint256 PERAEmissionReward = distance.mul(blockRewardLP).div(200);
         if((block.number - genesisBlock) > tenYearsasBlock){
             PERAEmissionReward = 0;
         }
@@ -786,7 +786,6 @@ library SafeMath {
         if(totalStakedLP == 0){
             FeeRewPoolLP = 0;
         }
-
         user.userReflectedLP = user.userLPamount.mul(LPRate).div(1e12);
     }
  }
