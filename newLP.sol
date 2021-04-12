@@ -135,9 +135,9 @@ library SafeMath {
     // Smart contract address of the LP token (should be set by the contract owner, see function addLPToken)
     address lpTokenAddress;
     // Record of staked LP token amount for a given address
-    mapping (address => uint256) public userLPamount;
+    mapping (address => uint256) private userLPamount;
     // Last block number that PERA distribution occurs for LP token stakers
-    uint256 public lastRewardBlock = 0;
+    uint256 private lastRewardBlock = 0;
 
     // PERA smart contract applies a 2% transaction fee on each on-chain PERA transaction
     uint private tradingCompFee = 50; // Transaction fee rate for trading competition reward pool (0.50% of each PERA transaction)
@@ -206,7 +206,7 @@ library SafeMath {
     // 3- Exclude the AMM-exchange router contract address
     // 4- Provide the initial liquidity to an AMM-exchange
     // 5- Exclude the pool address where the initial liquidity is provided
-    function excludeAccount(address account) public {
+    function excludeAccount(address account) external {
         require(msg.sender == manager);
         require(!_isExcluded(account));
         _excluded.push(account);
@@ -215,7 +215,7 @@ library SafeMath {
 
     // Function can only be used by the contract owner
     // Used for removing an address from the excluded holders list
-    function includeAccount(address account) public {
+    function includeAccount(address account) external {
     require(msg.sender == manager);
     require(_isExcluded(account));
         for (uint256 i = 0; i < _excluded.length; i++) {
@@ -250,27 +250,27 @@ library SafeMath {
     // Function can only be used by the contract owner
     // It is used to set the reward multiplier for LP token stakers
     // Initial value is set to 2 (0,5 PERA/block)
-    function updateLPMultiplier(uint256 newLPMultiplier) public {
+    function updateLPMultiplier(uint256 newLPMultiplier) external {
         require(msg.sender == manager);
-        require(newLPMultiplier >= 1 && newLPMultiplier <= 20, 'Multiplier is out of acceptable range!');
+        require(newLPMultiplier >= 1 && newLPMultiplier <= 20, 'Multiplier is out of the acceptable range!');
         LPRewardMultiplier = newLPMultiplier;
     }
 
     // Function can only be used by the contract owner
     // It is used to set the reward multiplier for the trading competition reward pool
     // Initial value is set to 2 (5600 PERA/day)
-    function updateTCMultiplier(uint256 newTCMultiplier) public {
+    function updateTCMultiplier(uint256 newTCMultiplier) external {
         require(msg.sender == manager);
-        require(newTCMultiplier >= 1 && newTCMultiplier <= 5, 'Multiplier is out of acceptable range!');
+        require(newTCMultiplier >= 1 && newTCMultiplier <= 5, 'Multiplier is out of the acceptable range!');
         TCRewardMultiplier = newTCMultiplier;
     }
 
     // Function can only be used by the contract owner
     // It is used to set the minimum PERA transaction required for the trading competition
     // Initial value is set to 100
-    function updateminTCamount(uint256 newminTCamount) public {
+    function updateminTCamount(uint256 newminTCamount) external {
         require(msg.sender == manager);
-        require(newminTCamount >= (10 * 10 ** decimals)  && newminTCamount <= (1000 * 10 ** decimals), 'Amount is out of acceptable range!');
+        require(newminTCamount >= (10 * 10 ** decimals)  && newminTCamount <= (1000 * 10 ** decimals), 'Amount is out of the acceptable range!');
         minTCamount = newminTCamount;
     }
 
@@ -408,7 +408,7 @@ library SafeMath {
       uint256 lastTIndex;
     }
     mapping(uint256 => findTopLast) public findTLast;
-    mapping(string => uint256) tcdetailz;
+    mapping(string => uint256) public tcdetailz;
 
     //PERA Sort Algorithm:
     function tradingComp(uint256 _value, address _addr, uint _bnum) internal {
@@ -729,11 +729,10 @@ library SafeMath {
                 _transfer(address(this), msg.sender, pendingReward);
             }
         }
-
         if (_amount > 1 * 10 ** LPTokenDecimals) {
-            BEP20(lpTokenAddress).transferFrom(msg.sender, address(this), _amount);
             user.userLPamount = user.userLPamount.add(_amount);
             totalStakedLP += _amount;
+            BEP20(lpTokenAddress).transferFrom(msg.sender, address(this), _amount);
         }
         user.userReflectedLP = user.userLPamount.mul(LPRate).div(1e12);
     }
