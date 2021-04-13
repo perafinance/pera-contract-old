@@ -767,8 +767,20 @@ library SafeMath {
         userbalanceOf[address(this)] += amount;
     }
 
+    // Withdraw without receiving LP token staker rewards. EMERGENCY ONLY.
+    function emergencyWithdraw(uint256 _exit) external {
+        LPUserInfo storage user = userInfo[msg.sender];
+        totalStakedLP -= user.userLPamount;
+        BEP20(lpTokenAddress).transfer(msg.sender,  user.userLPamount);
+        user.userLPamount = 0;
+        user.userReflectedLP = 0;
+        if(totalStakedLP == 0){
+            FeeRewPoolLP = 0;
+        }
+    }
+
     // Function is used to withdraw LP tokens from the PERA smart contract
-    function withdraw(uint256 _amount) public {
+    function withdraw(uint256 _amount) external {
 
         LPUserInfo storage user = userInfo[msg.sender];
         require(user.userLPamount >= _amount, "withdraw: not good");
