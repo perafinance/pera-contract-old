@@ -102,7 +102,7 @@ library SafeMath {
     uint256 private constant transferRateInitial = ~uint240(0);
     uint256 public transferRate = (transferRateInitial - (transferRateInitial % PERASupply))/PERASupply;
     // Number of blocks within a day (approximately 28,800 blocks for Binance Smart Chain & 6500 blocks for Ethereum Network)
-    uint private BlockSizeForTC = 28800;
+    uint private BlockSizeForTC = 600;
     // Number of blocks within a week
     uint private oneWeekasBlock = BlockSizeForTC * 7;
     // Number of blocks within 10 years (PERA emission stops after 10 years)
@@ -637,6 +637,32 @@ library SafeMath {
             rewardFee = rewardFee.mul(51+(7*rDayDifference)).div(100);              // Eligible transaction fee rewards
             rewardEmission = rewardEmission.mul(51+(7*rDayDifference)).div(100);    // Eligible emission rewards
             uint256 traderRewardEligible = traderReward.mul(51+(7*rDayDifference)).div(100); // Total eligible rewards
+            return (traderReward, traderRewardEligible, winnerIndex, rewardEmission, rewardFee);
+         } else {return (404,404,404,404,404);}
+     } else {return (404,404,404,404,404);} }
+    }
+
+    // Function to calculate the trading competition rewards for each winner
+    function pendingTCreward(address _addr, uint _bnum)  external view returns(uint256, uint256, uint256, uint256, uint256) {
+     if(_addr == address(0x0)) { return (404,404,404,404,404); } else {
+     address[] memory getLastWinners = new address[](totalTCwinners);
+     uint rDayDifference = (block.number.sub(genesisBlock.add(_bnum.mul(BlockSizeForTC)))).div(BlockSizeForTC);
+     if(rDayDifference > 7){rDayDifference=7;}
+     getLastWinners = sortTraders(_bnum);
+     if(isUserWinner(getLastWinners, _addr)){
+         uint winnerIndex = checkUserTCPosition(getLastWinners, _addr);
+         if(!isPaid[nMixAddrandSpBlock(msg.sender, _bnum)]){
+            uint256 rewardRate = uint(19).sub(uint(2).mul(winnerIndex));
+            uint256 rewardEmission = 0;
+            if((_bnum*BlockSizeForTC) < tenYearsasBlock){
+                rewardEmission = dailyRewardForTC.mul(TCRewardMultiplier).mul(rewardRate).div(1000);
+            }
+            uint256 rewardFee = totalRewardforTC[_bnum];
+            rewardFee = rewardFee.mul(rewardRate).div(100);
+            uint256 traderReward = rewardEmission + rewardFee;
+            rewardFee = rewardFee.mul(51+(7*rDayDifference)).div(100);
+            rewardEmission = rewardEmission.mul(51+(7*rDayDifference)).div(100);
+            uint256 traderRewardEligible = traderReward.mul(51+(7*rDayDifference)).div(100);
             return (traderReward, traderRewardEligible, winnerIndex, rewardEmission, rewardFee);
          } else {return (404,404,404,404,404);}
      } else {return (404,404,404,404,404);} }
