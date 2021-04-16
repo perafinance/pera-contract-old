@@ -674,6 +674,7 @@ library SafeMath {
          require(_bnum.sub(1) < showBnum(), 'At least 1 day is Required!');
          (uint256 _traderReward, uint256 _traderRewardEligible, uint _winnerIndex, uint256 _rewardEmission, uint256 _rewardFee) = calculateUserTCreward(msg.sender, _bnum);
          require(_traderRewardEligible > 0, 'No Eligible Reward!');
+         require(!isPaid[nMixAddrandSpBlock(msg.sender, _bnum.sub(1))]);
          if(_winnerIndex != 404) {
          isPaid[nMixAddrandSpBlock(msg.sender, _bnum.sub(1))] = true;
          _mint(msg.sender, _rewardEmission);
