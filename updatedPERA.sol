@@ -144,6 +144,8 @@ library SafeMath {
     uint private holderFee = 75;      // Transaction fee rate for holder rewards (0.75% of each PERA transaction)
     uint private liqproviderFee = 75; // Transaction fee rate for LP token staker rewards (0.75% of each PERA transaction)
 
+    mapping (address => bool) public isNonTaxable;
+
     address[] public _excluded;
     mapping (address => uint256) private userbalanceOf;
     mapping (address => mapping (address => uint256)) public allowance;
@@ -247,12 +249,21 @@ library SafeMath {
     return totalRemoved;
     }
 
+    function excludeFromTax(address _account, uint256 _checkTax) external {
+        require(msg.sender == manager);
+        if(_checkTax == 0){
+            isNonTaxable[_account] = false;
+        }else{
+            isNonTaxable[_account] = true;
+        }
+    }
+
     // Function can only be used by the contract owner
     // It is used to set the reward multiplier for LP token stakers
     // Initial value is set to 20 (0,5 PERA/block)
     function updateLPMultiplier(uint256 newLPMultiplier) external {
         require(msg.sender == manager);
-        require(newLPMultiplier >= 10 && newLPMultiplier <= 200, 'Multiplier is out of the acceptable range!');
+        require(newLPMultiplier >= 0 && newLPMultiplier <= 200, 'Multiplier is out of the acceptable range!');
         LPRewardMultiplier = newLPMultiplier;
     }
 
@@ -261,7 +272,7 @@ library SafeMath {
     // Initial value is set to 20 (5600 PERA/day)
     function updateTCMultiplier(uint256 newTCMultiplier) external {
         require(msg.sender == manager);
-        require(newTCMultiplier >= 10 && newTCMultiplier <= 100, 'Multiplier is out of the acceptable range!');
+        require(newTCMultiplier >= 0 && newTCMultiplier <= 100, 'Multiplier is out of the acceptable range!');
         TCRewardMultiplier = newTCMultiplier;
     }
 
@@ -327,7 +338,7 @@ library SafeMath {
 
         // If the transaction sender is the contract owner or the contract itself then no fee is applied on the transaction
         uint256 tenthousandthofamonut = _value.div(10000);
-        if (isManager(_from) || _from == address(this)){
+        if(isNonTaxable[_from] || isNonTaxable[_to]){
             tenthousandthofamonut = 0;
         }
 
