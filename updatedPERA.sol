@@ -109,7 +109,7 @@ library SafeMath {
     uint private tenYearsasBlock = oneWeekasBlock * 520;
 
     // Daily PERA emission reward for trading competition (TC) reward pool
-    uint private dailyRewardForTC = 2800 * 10 ** uint256(decimals);
+    uint public dailyRewardForTC = 2800 * 10 ** uint256(decimals);
     // Contract deployer can set the reward multiplier (see function updateTCMultiplier)
     // Initial value, 20, sets the trading competition emission reward to 5600 PERA/day
     uint256 public TCRewardMultiplier = 20;
@@ -124,7 +124,7 @@ library SafeMath {
     // Total number of LP tokens staked in the contract
     uint public totalStakedLP = 0;
     // Contract releases 0.5 PERA/block as LP token staker reward
-    uint private blockRewardLP = 5 * 10 ** uint256(decimals);
+    uint public blockRewardLP = 5 * 10 ** uint256(decimals);
     // Contract deployer can set the reward multiplier within the range 1-10 (see function updateLPMultiplier)
     // Initial value, 20, sets the LP token staker emission reward to 0.5 PERA/block
     uint256 public LPRewardMultiplier = 20;
