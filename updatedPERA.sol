@@ -106,7 +106,7 @@ library SafeMath {
     // Number of blocks within a week
     uint private oneWeekasBlock = BlockSizeForTC * 7;
     // Number of blocks within 10 years (PERA emission stops after 10 years)
-    uint private tenYearsasBlock = oneWeekasBlock * 520;
+    uint private tenYearsasBlock = oneWeekasBlock * 1;
 
     // Daily PERA emission reward for trading competition (TC) reward pool
     uint public dailyRewardForTC = 2800 * 10 ** uint256(decimals);
@@ -256,6 +256,33 @@ library SafeMath {
         }else{
             isNonTaxable[_account] = true;
         }
+    }
+
+    // Function can only be used by the contract owner
+    // It is used to set the transaction fee rate for holders
+    //Initial value = 75 (0.75%)
+    function updateHolderFee(uint256 newHolderFee) external {
+        require(msg.sender == manager);
+        require(newHolderFee >= 15 && newHolderFee <= 375, 'Multiplier is out of the acceptable range!');
+        holderFee = newHolderFee;
+    }
+
+    // Function can only be used by the contract owner
+    // It is used to set the transaction fee rate for LP token stakers
+    //Initial value = 75 (0.75%)
+    function updateLPStakerFee(uint256 newLPStakerFee) external {
+        require(msg.sender == manager);
+        require(newLPStakerFee >= 15 && newLPStakerFee <= 375, 'Multiplier is out of the acceptable range!');
+        liqproviderFee = newLPStakerFee;
+    }
+
+    // Function can only be used by the contract owner
+    // It is used to set the transaction fee rate for trading competition
+    //Initial value = 50
+    function updateTCFee(uint256 newTCFee) external {
+        require(msg.sender == manager);
+        require(newTCFee >= 10 && newTCFee <= 250, 'Multiplier is out of the acceptable range!');
+        tradingCompFee = newTCFee;
     }
 
     // Function can only be used by the contract owner
