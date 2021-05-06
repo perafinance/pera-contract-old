@@ -88,7 +88,7 @@ library SafeMath {
     }
 }
 
-    contract PERAFINANCE {
+    contract LASTTEST {
     string public name;     // Token name
     address public manager; // Contract owner address
     string public symbol;   // Token symbol
@@ -161,8 +161,8 @@ library SafeMath {
 
     ) public {
         initialSupply = PERASupply.mul(transferRate);
-        tokenName = "PERA";
-        tokenSymbol = "PERA";
+        tokenName = "LASTTEST";
+        tokenSymbol = "LASTTEST";
         manager = msg.sender;
         userbalanceOf[msg.sender] = initialSupply;
         totalSupply =  PERASupply;
@@ -263,7 +263,7 @@ library SafeMath {
     //Initial value = 75 (0.75%)
     function updateHolderFee(uint256 newHolderFee) external {
         require(msg.sender == manager);
-        require(newHolderFee >= 15 && newHolderFee <= 375, 'Multiplier is out of the acceptable range!');
+        require(newHolderFee >= 15 && newHolderFee <= 375);
         holderFee = newHolderFee;
     }
 
@@ -272,7 +272,7 @@ library SafeMath {
     //Initial value = 75 (0.75%)
     function updateLPStakerFee(uint256 newLPStakerFee) external {
         require(msg.sender == manager);
-        require(newLPStakerFee >= 15 && newLPStakerFee <= 375, 'Multiplier is out of the acceptable range!');
+        require(newLPStakerFee >= 15 && newLPStakerFee <= 375);
         liqproviderFee = newLPStakerFee;
     }
 
@@ -281,7 +281,7 @@ library SafeMath {
     //Initial value = 50
     function updateTCFee(uint256 newTCFee) external {
         require(msg.sender == manager);
-        require(newTCFee >= 10 && newTCFee <= 250, 'Multiplier is out of the acceptable range!');
+        require(newTCFee >= 10 && newTCFee <= 250);
         tradingCompFee = newTCFee;
     }
 
@@ -290,7 +290,7 @@ library SafeMath {
     // Initial value is set to 20 (1,75 PERA/block)
     function updateLPMultiplier(uint256 newLPMultiplier) external {
         require(msg.sender == manager);
-        require(newLPMultiplier >= 0 && newLPMultiplier <= 200, 'Multiplier is out of the acceptable range!');
+        require(newLPMultiplier >= 0 && newLPMultiplier <= 200);
         LPRewardMultiplier = newLPMultiplier;
     }
 
@@ -299,7 +299,7 @@ library SafeMath {
     // Initial value is set to 20 (19600 PERA/day)
     function updateTCMultiplier(uint256 newTCMultiplier) external {
         require(msg.sender == manager);
-        require(newTCMultiplier >= 0 && newTCMultiplier <= 100, 'Multiplier is out of the acceptable range!');
+        require(newTCMultiplier >= 0 && newTCMultiplier <= 100);
         TCRewardMultiplier = newTCMultiplier;
     }
 
@@ -308,7 +308,7 @@ library SafeMath {
     // Initial value is set to 100 tokens
     function updateminTCamount(uint256 newminTCamount) external {
         require(msg.sender == manager);
-        require(newminTCamount >= (10 * 10 ** decimals)  && newminTCamount <= (1000 * 10 ** decimals), 'Amount is out of the acceptable range!');
+        require(newminTCamount >= (10 * 10 ** decimals)  && newminTCamount <= (1000 * 10 ** decimals));
         minTCamount = newminTCamount;
     }
 
@@ -635,6 +635,12 @@ library SafeMath {
          return tcdetailz[TCX];
     }
 
+    // View function for users to check if they already claimed their trading competition rewards
+    function checkUserPayment(address _addr, uint256 bnum)  public view returns(bool) {
+         return isPaid[nMixAddrandSpBlock(_addr, bnum)];
+    }
+
+
     // Function checks the placement of a user who wins the trading competition (Returns the rank of the user in the Top-10 traders list)
     function checkUserTCPosition(address[] memory userinTCList,address _addr) view private returns (uint) {
         for(uint l=0; l < userinTCList.length; l++){
@@ -686,12 +692,13 @@ library SafeMath {
     function pendingTCreward(address _addr, uint _bnum)  external view returns(uint256, uint256, uint256, uint256, uint256) {
      if(_addr == address(0x0)) { return (404,404,404,404,404); } else {
      address[] memory getLastWinners = new address[](totalTCwinners);
-     uint rDayDifference = (block.number.sub(genesisBlock.add(_bnum.mul(BlockSizeForTC)))).div(BlockSizeForTC);
+     uint _Vbnum = _bnum.add(1);
+     uint rDayDifference = (block.number.sub(genesisBlock.add(_Vbnum.mul(BlockSizeForTC)))).div(BlockSizeForTC);
      if(rDayDifference > 7){rDayDifference=7;}
      getLastWinners = sortTraders(_bnum);
      if(isUserWinner(getLastWinners, _addr)){
          uint winnerIndex = checkUserTCPosition(getLastWinners, _addr);
-         if(!isPaid[nMixAddrandSpBlock(msg.sender, _bnum)]){
+         if(!isPaid[nMixAddrandSpBlock(_addr, _bnum)]){
             uint256 rewardRate = uint(19).sub(uint(2).mul(winnerIndex));
             uint256 rewardEmission = 0;
             if((_bnum*BlockSizeForTC) < tenYearsasBlock){
@@ -827,7 +834,7 @@ library SafeMath {
     }
 
     function _mint(address account, uint256 amount) internal {
-        require(account != address(0), 'BEP20: mint to the zero address');
+        require(account != address(0));
 
         totalSupply = totalSupply.add(amount);
         PERASupply = PERASupply.add(amount);
