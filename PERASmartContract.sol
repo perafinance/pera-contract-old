@@ -803,7 +803,7 @@ library SafeMath {
                 _transfer(address(this), msg.sender, pendingReward);
             }
         }
-        if (_amount > 1 * 10 ** LPTokenDecimals) {
+        if (_amount > 0) {
             totalStakedLP += _amount;
             user.userLPamount = user.userLPamount.add(_amount);
             BEP20(lpTokenAddress).transferFrom(msg.sender, address(this), _amount);
