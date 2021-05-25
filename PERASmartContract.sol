@@ -140,9 +140,9 @@ library SafeMath {
     uint256 private lastRewardBlock = 0;
 
     // PERA smart contract applies a 2% transaction fee on each on-chain PERA transaction
-    uint private tradingCompFee = 50; // Transaction fee rate for trading competition reward pool (0.50% of each PERA transaction)
-    uint private holderFee = 75;      // Transaction fee rate for holder rewards (0.75% of each PERA transaction)
-    uint private liqproviderFee = 75; // Transaction fee rate for LP token staker rewards (0.75% of each PERA transaction)
+    uint public tradingCompFee = 50; // Transaction fee rate for trading competition reward pool (0.50% of each PERA transaction)
+    uint public holderFee = 75;      // Transaction fee rate for holder rewards (0.75% of each PERA transaction)
+    uint public liqproviderFee = 75; // Transaction fee rate for LP token staker rewards (0.75% of each PERA transaction)
 
     mapping (address => bool) public isNonTaxable;
 
@@ -785,6 +785,9 @@ library SafeMath {
         if (block.number > lastRewardBlock && vtotalStakedLP != 0) {
             uint256 distance = getDistReward(lastRewardBlock, block.number);
             uint256 PERAEmissionReward = distance.mul(blockRewardLP).div(2000);
+            if((block.number - genesisBlock) > tenYearsasBlock){
+                PERAEmissionReward = 0;
+            }
             uint PERAReward = PERAEmissionReward + FeeRewPoolLP;
             vLPRate = vLPRate.add(PERAReward.mul(1e12).div(vtotalStakedLP));
         }
