@@ -106,7 +106,7 @@ library SafeMath {
     // Number of blocks within a week
     uint private oneWeekasBlock = BlockSizeForTC * 7;
     // Number of blocks within 10 years (PERA emission stops after 10 years)
-    uint private tenYearsasBlock = oneWeekasBlock * 1;
+    uint private tenYearsasBlock = oneWeekasBlock * 520;
 
     // Daily PERA emission reward for trading competition (TC) reward pool
     uint public dailyRewardForTC = 9800 * 10 ** uint256(decimals);
