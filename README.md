@@ -9,6 +9,20 @@ DEPLOYMENT GUIDE
 
 ```PERA Token Smart Contract Deployment Steps
 
+      ___         ___           ___           ___     
+     /  /\       /  /\         /  /\         /  /\    
+    /  /::\     /  /:/_       /  /::\       /  /::\   
+   /  /:/\:\   /  /:/ /\     /  /:/\:\     /  /:/\:\  
+  /  /:/~/:/  /  /:/ /:/_   /  /:/~/:/    /  /:/~/::\ 
+ /__/:/ /:/  /__/:/ /:/ /\ /__/:/ /:/___ /__/:/ /:/\:\
+ \  \:\/:/   \  \:\/:/ /:/ \  \:\/:::::/ \  \:\/:/__\/
+  \  \::/     \  \::/ /:/   \  \::/~~~~   \  \::/     
+   \  \:\      \  \:\/:/     \  \:\        \  \:\     
+    \  \:\      \  \::/       \  \:\        \  \:\    
+     \__\/       \__\/         \__\/         \__\/          
+                                                                                                    
+
+
 1- Deploy the smart contract
 2- Verify and publish the smart contract 
 3- For the holder rewards to be distributed properly, contract owner should follow these steps after the contract deployment:
