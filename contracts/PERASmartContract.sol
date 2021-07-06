@@ -715,7 +715,7 @@ library SafeMath {
      } else {return (404,404,404,404,404);} }
     }
 
-    // Funciton for trading competition winners to claim their rewards
+    // Function for trading competition winners to claim their rewards
     function getTCreward(uint _bnum) external {
          require(_bnum > 0,"Min 1 TC cycle must end.");
          require(_bnum.sub(1) < showBnum(), 'Must wait at least 1 day!');
