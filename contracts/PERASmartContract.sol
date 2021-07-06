@@ -88,14 +88,14 @@ library SafeMath {
     }
 }
 
-    contract LASTTEST {
+    contract PERA {
     string public name;     // Token name
     address public manager; // Contract owner address
     string public symbol;   // Token symbol
     uint256 public decimals = 18;               // Token decimals
     uint256 private LPTokenDecimals = 18;       // Liquidity provider (LP) token decimals
     uint256 public genesisBlock = block.number; // Block number of the contract creation
-    uint256 public PERASupply = 35000000 * 10 ** uint256(decimals); // Initial PERA supply
+    uint256 public PERASupply = 44950800 * 10 ** uint256(decimals); // Initial PERA supply
     uint256 public totalSupply;
 
     // Initial rate for holder reward distribution coefficient (transferRate), used for rebasing holders' balances
@@ -161,8 +161,8 @@ library SafeMath {
 
     ) public {
         initialSupply = PERASupply.mul(transferRate);
-        tokenName = "LASTTEST";
-        tokenSymbol = "LASTTEST";
+        tokenName = "PERA";
+        tokenSymbol = "PERA";
         manager = msg.sender;
         userbalanceOf[msg.sender] = initialSupply;
         totalSupply =  PERASupply;
